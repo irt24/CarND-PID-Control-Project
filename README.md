@@ -36,5 +36,7 @@ This sets the initial values of the hyperparameters as discussed above, `num_non
 ![kp-evolution](data/pid_wrapper_debug_twiddle_KP_plot.png)
 ![ki-evolution](data/pid_wrapper_debug_twiddle_KI_plot.png)
 ![kd-evolution](data/pid_wrapper_debug_twiddle_KD_plot.png)
+![error-evolution](data/pid_wrapper_debug_twiddle_BEST_ERROR_IN_CYCLE_plot.png)
 
+I am doubtful that the values my run converged to are optimal. The car is still swerving sometimes, so there is definitely room for improvement. I suspect the Twiddle algorithm is very sensitive to its own hyperparameters (initial coefficient values, number of evaluation steps, initial `dp` values).
 
