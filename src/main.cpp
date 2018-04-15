@@ -1,7 +1,10 @@
+#include <cstdlib>
+#include <assert.h>
 #include <uWS/uWS.h>
 #include <iostream>
 #include "json.hpp"
 #include "PID.h"
+#include "pid_wrapper.h"
 #include <math.h>
 
 // for convenience
@@ -28,14 +31,47 @@ std::string hasData(std::string s) {
   return "";
 }
 
-int main()
+// Compulsory command-line arguments:
+//     Kp, Ki, Kd, run_id.
+// Optional command-line arguments (if one is specified, all must be specified):
+//     num_noneval_steps, num_eval_steps, stop_criterium.
+int main(int argc, char **argv)
 {
+  assert(argc == 4 + 1 || argc == 7 + 1);
+
+  double Kp = atof(argv[1]);
+  double Ki = atof(argv[2]);
+  double Kd = atof(argv[3]);
+  std::string run_id = argv[4];
+
+  // By setting these numbers to 0, twiddle is not run.
+  int num_noneval_steps = 0; 
+  int num_eval_steps = 0;
+  double stop_criterium = 0.0;
+
+  if (argc > 5) {  // Optional twiddle parameters are specified.
+    assert(argc == 8);
+    num_noneval_steps = atoi(argv[5]); 
+    num_eval_steps = atoi(argv[6]); 
+    stop_criterium = atof(argv[7]); 
+  }
+
+  // Print the flags just to double-check they're assigned to the right variables.
+  std::cout << "Initial Kp: " << Kp << std::endl;
+  std::cout << "Initial Ki: " << Ki << std::endl;
+  std::cout << "Initial Kd: " << Kd << std::endl;
+  std::cout << "Run ID: " << run_id << std::endl;
+  std::cout << "Num noneval steps for twiddle: " << num_noneval_steps << std::endl;
+  std::cout << "Num eval steps for twiddle: " << num_eval_steps << std::endl;
+  std::cout << "Stop criterium for twiddle: " << stop_criterium << std::endl;
+
+  PIDWrapper pid_wrapper(Kp, Ki, Kd,
+                         num_noneval_steps, num_eval_steps, stop_criterium,
+                         run_id);
+  int step = 0;
+
   uWS::Hub h;
-
-  PID pid;
-  // TODO: Initialize the pid variable.
-
-  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&pid_wrapper, &step](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -43,29 +79,36 @@ int main()
     {
       auto s = hasData(std::string(data).substr(0, length));
       if (s != "") {
+        step += 1;
+
         auto j = json::parse(s);
         std::string event = j[0].get<std::string>();
         if (event == "telemetry") {
           // j[1] is the data JSON object
           double cte = std::stod(j[1]["cte"].get<std::string>());
-          double speed = std::stod(j[1]["speed"].get<std::string>());
-          double angle = std::stod(j[1]["steering_angle"].get<std::string>());
-          double steer_value;
-          /*
-          * TODO: Calcuate steering value here, remember the steering value is
-          * [-1, 1].
-          * NOTE: Feel free to play around with the throttle and speed. Maybe use
-          * another PID controller to control the speed!
-          */
-          
-          // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
 
+          // Calculate steering value.
+          pid_wrapper.UpdateError(cte);
+          double steer_value = -pid_wrapper.TotalError();
+
+          if (steer_value < -1) {
+            steer_value = -1;
+          } else if (steer_value > 1) {
+            steer_value = 1;
+          }
+
+          if (cte > 5) {
+            // We're probably off-track by now. Start over.
+            std::string msg = "42[\"reset\",{}]";
+            ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+            std::cout << "Restarting at step " << step << std::endl;
+          }
+          
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = 0.3;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
+          //std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
