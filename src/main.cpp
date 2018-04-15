@@ -31,30 +31,29 @@ std::string hasData(std::string s) {
   return "";
 }
 
-// Compulsory command-line arguments:
-//     Kp, Ki, Kd, run_id.
-// Optional command-line arguments (if one is specified, all must be specified):
-//     num_noneval_steps, num_eval_steps, stop_criterium.
+// Command-line arguments (all optional):
+//     Kp, Ki, Kd, run_id, num_noneval_steps, num_eval_steps, stop_criterium.
 int main(int argc, char **argv)
 {
-  assert(argc == 4 + 1 || argc == 7 + 1);
+  // Coefficients the Twiddle algorithm converged to.
+  double Kp =  0.281000;
+  double Ki = 0.00051;
+  double Kd = 5.364032;
+  std::string run_id = "";
 
-  double Kp = atof(argv[1]);
-  double Ki = atof(argv[2]);
-  double Kd = atof(argv[3]);
-  std::string run_id = argv[4];
-
-  // By setting these numbers to 0, twiddle is not run.
+  // By setting these values to 0, Twiddle is not run.
   int num_noneval_steps = 0; 
   int num_eval_steps = 0;
   double stop_criterium = 0.0;
 
-  if (argc > 5) {  // Optional twiddle parameters are specified.
-    assert(argc == 8);
-    num_noneval_steps = atoi(argv[5]); 
-    num_eval_steps = atoi(argv[6]); 
-    stop_criterium = atof(argv[7]); 
-  }
+  // Overwrite default values when command-line arguments are provided.
+  if (argc > 1) Kp = atof(argv[1]);
+  if (argc > 2) Ki = atof(argv[2]);
+  if (argc > 3) Kd = atof(argv[3]);
+  if (argc > 4) run_id = argv[4];
+  if (argc > 5) num_noneval_steps = atoi(argv[5]); 
+  if (argc > 6) num_eval_steps = atoi(argv[6]); 
+  if (argc > 7) stop_criterium = atof(argv[7]); 
 
   // Print the flags just to double-check they're assigned to the right variables.
   std::cout << "Initial Kp: " << Kp << std::endl;
