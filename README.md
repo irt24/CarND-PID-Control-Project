@@ -25,4 +25,16 @@ As visible in the `run_simulation.sh` script, the coefficients for this set of r
 
 As mentioned above, the PID controller with coefficients set to `Kp = 2.0, Ki = 0.0004, Kd = 3.0` yields satisfactory performance: the car doesn't leave the track, but still swerves more than desirable.
 
-In order to tune these hyperparameters, I used the Twiddle algorithm presented in the course, with small tweaks. Its implementation is in the `PIDWrapper` class which, not surprisingly, wraps the `PID` controller and periodically updates the hyperparameters. The algorithm proceeds in cycles. One cycle consists of `num_noneval_steps` in which the CTE error is accummulated and `num_eval_steps` in which a new set of hyperparameters is evaluated. Evaluation is short-circuited whenever the accummulated error is better than the best error. In order to deal with the cases in which the car gets off-track, I reset the simulator and the internal state of the controller (but not the hyperparameters!) when `CTE >= 5`.
+In order to tune these hyperparameters, I used the Twiddle algorithm presented in the course, with small tweaks. Its implementation is in the `PIDWrapper` class which, not surprisingly, wraps the `PID` controller and periodically updates the hyperparameters. The algorithm proceeds in cycles. One cycle consists of `num_noneval_steps` in which the CTE error is accummulated and `num_eval_steps` in which a new set of hyperparameters is evaluated. Evaluation is short-circuited whenever the accummulated error is already worse than the best error. In order to deal with the cases in which the car gets off-track, I reset the simulator and the internal state of the controller (but not the hyperparameters!) when `CTE >= 5`.
+
+In order to run the twiddle algorithm, I started the server with the following command:
+```
+./pid 0.2 0.0004 3.0 twiddle 100 5000 0.2
+```
+This sets the initial values of the hyperparameters as discussed above, `num_noneval_steps=100`, `num_eval_steps=5000` (which roughly corresponds to one lap) and `stop_criterium=0.2`. The simulation ran for ~400K steps before converging to the following values: `Kp = 0.281000, Ki = 0.00051, Kd = 5.364032`. The best error (computed as the sum of `CTE` squares over `5000` evaluation steps) decreased from `813` down to `447`. The plots below show the evolution of the coefficients and best error.
+
+![kp-evolution](data/pid_wrapper_debug_twiddle_KP_plot.png)
+![ki-evolution](data/pid_wrapper_debug_twiddle_KI_plot.png)
+![kd-evolution](data/pid_wrapper_debug_twiddle_KD_plot.png)
+
+
