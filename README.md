@@ -10,3 +10,19 @@ As visible in the `run_simulation.sh` script, the coefficients for this set of r
 
 ![p-run-1](data/pid_debug_p-1_plot.png)
 
+### PI Components
+As visible in the `run_simulation.sh` script, the coefficients for this set of runs are `Kp = 0.2, Ki = 0.0004, Kd = 0.0`. Initially, I set `Ki = 0.004` as suggested in the course, but the car quickly gets off the round (after ~500 steps). With a 10x lower value, the car remains on the road longer (~1000 steps), comparable to the P-only simulation. The I component seems to do more harm than good, which might mean that parameter tuning is necessary in order to turn it into a helpful term.
+
+![pi-run-2](data/pid_debug_pi-1_plot.png)
+
+### PID Components
+As visible in the `run_simulation.sh` script, the coefficients for this set of runs are `Kp = 0.2, Ki = 0.0004, Kd = 3.0`. I chose `Kd = 3.0` because that was the value suggested in the course. With the addition of the D component, the car consistently finishes a full lap across the 3 runs. The plot below shows the evolution of the errors during the first run. It's interesting to see how the absolute `CTE` error does go up especially around sharp curves due to the `D` component, but then soon recovers (without the simulator being reset). Consequently, the car does swerve more than desirable, but never leaves the track.
+
+![pi-run-3](data/pid_debug_pid-1_plot.png)
+
+## Reflection Item #2
+*Describe how the final hyperparameters were chosen.*
+
+As mentioned above, the PID controller with coefficients set to `Kp = 2.0, Ki = 0.0004, Kd = 3.0` yields satisfactory performance: the car doesn't leave the track, but still swerves more than desirable.
+
+In order to tune these hyperparameters, I used the Twiddle algorithm presented in the course, with small tweaks. Its implementation is in the `PIDWrapper` class which, not surprisingly, wraps the `PID` controller and periodically updates the hyperparameters. The algorithm proceeds in cycles. One cycle consists of `num_noneval_steps` in which the CTE error is accummulated and `num_eval_steps` in which a new set of hyperparameters is evaluated. Evaluation is short-circuited whenever the accummulated error is better than the best error. In order to deal with the cases in which the car gets off-track, I reset the simulator and the internal state of the controller (but not the hyperparameters!) when `CTE >= 5`.
